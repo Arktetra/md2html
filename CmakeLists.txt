@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.5)
+
+set(CMAKE_CXX_FLAGS "-O -Wall -Wextra")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -Wall -Wextra")
+
+project(md2html)
+
+add_executable(md2html main.cpp)
+add_library(str src/printer/string.cpp)
+
+target_link_libraries(md2html str)
