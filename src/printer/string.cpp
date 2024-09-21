@@ -1,70 +1,131 @@
 #include "./string.h"
 
-unsigned int length(const char* str) {
-    int n;
-    const char *p;
+namespace Utils {
+    unsigned int length(const char* str) {
+        unsigned int i;
+        const char *p;
 
-    for (n = 0, p = str; *p; p++, n++);
+        for (i = 0, p = str; *p; i++, p++);
 
-    return n;
-}
-
-void copy(void* dst, const void* src, const unsigned int n) {
-    const char *psrc;
-    char *pdst;
-    unsigned int i;
-
-    for (i = n, psrc = (const char*)src, pdst = (char*)dst; i; psrc++, pdst++, i--) {
-        *pdst = *psrc;
+        return i;
     }
 
-    *pdst = '\0';
+    void copy(void* dst, const void* src, int count) {
+        const char* psrc;
+        char* pdst;
 
-    return;
+        for (psrc = (const char*)src, pdst = (char*)dst;
+            count; 
+            psrc++, pdst++, count--) {
+            *pdst = *psrc;
+        }
+
+        *pdst = '\0';
+
+    }
 }
-
-String::String() {
-    this->count = 0;
-    this->data = (char*)malloc(0);
-}
-
 
 String::String(const char* str) {
-    this->count = length(str);
-    this->data = (char*)malloc((this->count + 1) * sizeof(char));
-    copy(this->data, str, this->count);
+    size = Utils::length(str);
+    ptr = UniquePtr<const char>(str);
 }
 
-unsigned int String::len() {
-    return this->count;
+String::String(String&& str) {
+    this->size = str.len();
+    this->ptr = std::move(str.ptr);
+}
+
+String& String::operator=(String&& o) {  
+    this->size = o.size;
+    this->ptr = std::move(o.ptr);
+
+    return *this;
 }
 
 void String::concat(const char* str) {
-    unsigned int str_len;
-    str_len = length(str);
-    this->data = (char*)realloc(this->data, (this->count + str_len + 1) * sizeof(char));
-    copy(this->data + this->count, str, this->count + str_len);
+    this->check_nullptr("the original string");
+
+    const char* lhs = this->ptr.release();
+    unsigned int str_size = Utils::length(str);
+    unsigned int new_size = this->size + str_size;
+
+    char* new_data_ptr = new char;
+    Utils::copy(new_data_ptr, lhs, this->size);
+    Utils::copy(new_data_ptr + this->size, str, new_size);
+
+    this->size = new_size;
+    this->ptr = UniquePtr<const char>(new_data_ptr);
 }
 
-void String::concat(const String str) {
-    this->concat(str.data);
+String String::operator+(const char* str) {
+    this->check_nullptr("the original string");
+
+    const char* lhs = this->ptr.get();
+
+    unsigned int str_size = Utils::length(str);
+    unsigned int new_size = this->size + str_size;
+    
+    char* new_data_ptr = new char;
+    Utils::copy(new_data_ptr, lhs, this->size);
+    Utils::copy(new_data_ptr + this->size, str, new_size);
+
+    return String((const char*)new_data_ptr);
 }
 
-String String::operator+(const char* rhs) {
-    unsigned int rhs_len = length(rhs);
-    unsigned int lhs_len = this->len();
-
-    char* result_data = (char*)malloc((lhs_len + rhs_len + 1) * sizeof(char));
-    copy(result_data, this->data, lhs_len);
-    copy(result_data + lhs_len, rhs, rhs_len);
-
-    return String(result_data);
+String String::operator+(String& rhs) {
+    this->check_nullptr("lhs");
+    rhs.check_nullptr("rhs");
+    
+    return *this + rhs.get();
 }
 
-String String::operator+(const String rhs) {
-    return String(*this + rhs.data);
+String String::copy() {
+    this->check_nullptr("the string");
+    
+    char* new_data_ptr = new char;
+
+    Utils::copy(new_data_ptr, this->get(), this->size);
+
+    return String((const char*)new_data_ptr);
 }
 
-String::~String() {
-    free(this->data);
+unsigned int String::len() {
+    return this->size;
+}
+
+const char* String::get() {
+    check_nullptr("string");
+
+    return ptr.get();
+}
+
+/// For checking whether the data pointer of a string is a null pointer
+/// or not, and displaying an error message if it evaluates to true.
+void String::check_nullptr(const char* position) {
+    if (this->ptr.get() == nullptr) {
+        std::cerr << "Error: Data pointer of " << position << " is a null pointer.\n"
+                     "       May be a move was performed on " << position << "." << std::endl;
+        exit(139); 
+    }
+}
+
+std::ostream& operator<<(std::ostream& stream, String& str) {
+    stream << str.get();
+    return stream;
+}
+
+String operator+(const char* lhs, String& rhs) {
+    if (rhs.get() == nullptr) {
+        std::cerr << "Error: Data pointer of rhs is a null pointer.\n"
+                     "       May be the value has moved out of it." << std::endl;
+    }
+
+    unsigned int lhs_size = Utils::length(lhs);
+    unsigned int new_size = lhs_size + rhs.len();
+
+    char* new_data_ptr = new char;
+    Utils::copy(new_data_ptr, lhs, lhs_size);
+    Utils::copy(new_data_ptr + lhs_size, rhs.get(), new_size);
+
+    return String((const char*)new_data_ptr);
 }

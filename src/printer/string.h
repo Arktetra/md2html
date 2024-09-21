@@ -1,28 +1,41 @@
-// String str("Hello ");
-// str.concat("World!");
-// std::cout << str;
-// deallocate resource
+#ifndef STRING_
 #define STRING_
 
 #include <iostream>
-#include <assert.h>
-#include <errno.h>
+#include "../memory/unique_ptr.h"
 
-unsigned int length(const char*);
-
-void copy(void* dst, const void* src, const unsigned int n);
+namespace Utils {
+    unsigned int length(const char* str);
+    void copy(void* dst, void* src, int count);
+}
 
 class String {
-    unsigned int count;
+    unsigned int size;
+    UniquePtr<const char> ptr;
 
     public:
-        char *data;
-        String();
+        String() : size(0), ptr(nullptr) {}
         String(const char*);
+        String(String&&);
+        ~String() = default;
+
+        String& operator=(String&&);
+
         void concat(const char*);
-        void concat(const String);
+
+        String operator+(const char*);
+        String operator+(String&);
+
+        String copy();
+        
         unsigned int len();
-        String operator+(const char* rhs);
-        String operator+(const String rhs);
-        ~String();
+
+        const char* get();
+
+        void check_nullptr(const char* position);
 };
+
+std::ostream& operator<<(std::ostream& stream, String& str);
+String operator+(const char* lhs, String& rhs);
+
+#endif
