@@ -92,6 +92,8 @@ std::string Printer::format_layout() {
         formatted_layout_ptr[formatted_layout_iter] = this->_layout[layout_iter];
     }
 
+    formatted_layout_ptr[formatted_layout_iter] = '\0';
+
     std::string formatted_layout = (const char*) formatted_layout_ptr;
     delete [] formatted_layout_ptr;
 
@@ -101,74 +103,97 @@ std::string Printer::format_layout() {
 std::string Printer::wrap_body() {
     std::string body = "";
 
-    body += wrap_nav() + wrap_content();
+    std::vector<std::string> nav_buffer = wrap_nav();
+    std::vector<std::string> content_buffer = wrap_content();
+
+    for (unsigned int i = 0; i < nav_buffer.size(); i++) {
+        body += tabify(nav_buffer[i]) + "\n";
+    }
+
+    for (unsigned int i = 0; i < content_buffer.size(); i++) {
+        body += tabify(content_buffer[i]) + "\n";
+    }
 
     return "<body>\n" + body + "</body>";
 }
 
-std::string Printer::wrap_nav(std::string brand) {
-    return "    <nav>" + brand + "</nav>\n";
+std::vector<std::string> Printer::wrap_nav(std::string brand) {
+    std::vector<std::string> nav_buffer;
+
+    nav_buffer.push_back("<nav>");
+    nav_buffer.push_back(tabify(wrap_heading_1(brand)));
+    nav_buffer.push_back("</nav>");
+    nav_buffer.push_back("<hr>");
+
+    return nav_buffer;
 }
 
-std::string Printer::wrap_content() {
-    std::string content = "";
-
+std::vector<std::string> Printer::wrap_content() {
+    std::vector<std::string> content_buffer;
+    content_buffer.push_back("<div class = \"content\">");
+    
     for (unsigned int i = 0; i < _tokens.size(); i++) {
         switch (_tokens[i].type()) {
             case TokenType::P:
-                content += wrap_paragraph(_tokens[i].lexeme());
+                content_buffer.push_back(tabify(wrap_paragraph(_tokens[i].lexeme())));
                 break;
             case TokenType::H1:
-                content += wrap_heading_1(_tokens[i].lexeme());
+                content_buffer.push_back(tabify(wrap_heading_1(_tokens[i].lexeme())));
                 break;
             case TokenType::H2:
-                content += wrap_heading_2(_tokens[i].lexeme());
+                content_buffer.push_back(tabify( wrap_heading_2(_tokens[i].lexeme())));
                 break;
             case TokenType::H3:
-                content += wrap_heading_3(_tokens[i].lexeme());
+                content_buffer.push_back(tabify(wrap_heading_3(_tokens[i].lexeme())));
                 break;
             case TokenType::H4:
-                content += wrap_heading_4(_tokens[i].lexeme());
+                content_buffer.push_back(tabify(wrap_heading_4(_tokens[i].lexeme())));
                 break;
             case TokenType::H5:
-                content += wrap_heading_5(_tokens[i].lexeme());
+                content_buffer.push_back(tabify(wrap_heading_5(_tokens[i].lexeme())));
                 break;
             case TokenType::H6:
-                content += wrap_heading_6(_tokens[i].lexeme());
+                content_buffer.push_back(tabify(wrap_heading_6(_tokens[i].lexeme())));
                 break;
             default:
-                content += "";
                 break;
         }
     }
 
-    return content;
+    content_buffer.push_back("</div>");
+    content_buffer.push_back("<hr>");
+
+    return content_buffer;
 }
 
 std::string Printer::wrap_paragraph(std::string paragraph) {
-    return "    <p>" + paragraph + "</p>\n";
+    return "<p>" + paragraph + "</p>";
 }
 
 std::string Printer::wrap_heading_1(std::string heading) {
-    return "    <h1>" + heading + "</h1>\n";
+    return "<h1>" + heading + "</h1>";
 }
 
 std::string Printer::wrap_heading_2(std::string heading) {
-    return "    <h2>" + heading + "</h2>\n";
+    return "<h2>" + heading + "</h2>";
 }
 
 std::string Printer::wrap_heading_3(std::string heading) {
-    return "    <h3>" + heading + "</h3>\n";
+    return "<h3>" + heading + "</h3>";
 }
 
 std::string Printer::wrap_heading_4(std::string heading) {
-    return "    <h4>" + heading + "</h4>\n";
+    return "<h4>" + heading + "</h4>";
 }
 
 std::string Printer::wrap_heading_5(std::string heading) {
-    return "    <h5>" + heading + "</h5>\n";
+    return "<h5>" + heading + "</h5>";
 }
 
 std::string Printer::wrap_heading_6(std::string heading) {
-    return "    <h6>" + heading + "</h6>\n";
+    return "<h6>" + heading + "</h6>";
 }
+
+std::string Printer::tabify(std::string str) {
+    return "    " + str;
+} 
