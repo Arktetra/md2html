@@ -48,12 +48,16 @@ class Lexer {
         void scan_tokens();
         void scan_token();
         void heading();
+        void paragraph();
         TokenType heading_level(unsigned int heading_level_counter);
         char advance();
+        char peek();
+        char peek_next();
         bool is_at_end();
 
         void error(const char* message);
         void display_tokens();
+        std::string slice_source(unsigned int begin, unsigned int end);
         std::vector<Token> tokens();
         
 };

@@ -47,7 +47,9 @@ void Lexer::scan_token() {
     char c = this->advance();
 
     switch (c) {
-        case '#': heading();
+        case '#': this->heading(); break;
+        case '\n': this->advance(); break;
+        default: this->paragraph();
     }
 }
 
@@ -62,33 +64,29 @@ void Lexer::heading() {
 
     if (c != ' ') error("Expected a ' ' after header tag.");
 
-    unsigned int lexeme_start = this->current;
+    this->start = this->current;
 
-    while (c != '\n' && !this->is_at_end()) {
+    while (this->peek() != '\n' && !this->is_at_end()) {
         c = this->advance();
     }
 
-    unsigned int lexeme_size = this->current - lexeme_start;
-    unsigned int lexeme_iterator;
-    unsigned int source_iterator;
-
-    char* lexeme = new char [lexeme_size];
-
-    for (
-        lexeme_iterator = 0, source_iterator = lexeme_start; 
-        source_iterator != this->current; 
-        lexeme_iterator++, source_iterator++
-    ) {
-        if (source[source_iterator] != '\n')
-            lexeme[lexeme_iterator] = source[source_iterator];
-    }
-
-    lexeme[lexeme_iterator] = '\0';
-
-    std::string header = (const char*) lexeme;
-    delete[] lexeme;
+    std::string header = this->slice_source(this->start, this->current);
     _tokens.push_back(Token(this->heading_level(heading_level_counter), header));
+}
+
+void Lexer::paragraph() {
+    while (true) {
+        if ((this->peek() == '\n' && this->peek_next() == '\n') 
+            || (this->source.length() - this->current < 2)) {
+            break;
+        }
+
+        this->advance();
     }
+
+    std::string para = this->slice_source(this->start, this->current);
+    _tokens.push_back(Token(TokenType::P, para));
+}
 
 TokenType Lexer::heading_level(unsigned int heading_level_counter) {
     switch (heading_level_counter) {
@@ -102,9 +100,26 @@ TokenType Lexer::heading_level(unsigned int heading_level_counter) {
 }
 
 char Lexer::advance() {
-    char c = source[current];
-    current += 1;
+    char c = source[this->current];
+    this->current += 1;
     return c;
+}
+
+char Lexer::peek() {
+    char c = source[this->current];
+    return c;
+}
+
+char Lexer::peek_next() {
+    try {
+        if (this->current + 1 > source.length()) {
+            throw "peeked out of bound value";
+        }
+        char c = source[this->current + 1];
+        return c;
+    } catch (const char* error) {
+        throw error;
+    }
 }
 
 bool Lexer::is_at_end() {
@@ -120,6 +135,35 @@ void Lexer::display_tokens() {
     for (unsigned int i = 0; i < this->_tokens.size(); i++) {
         std::cout << this->_tokens[i] << std::endl;
     }
+}
+
+/// @brief  returns `source[begin, end)`
+/// @param begin 
+/// @param end 
+/// @return std::string
+std::string Lexer::slice_source(unsigned int begin, unsigned int end) {
+    if (begin >= end) 
+        error("The beginning of the sliced string should be less than its end.");
+
+    char* sliced_ptr = new char [end - begin + 1];
+    unsigned int slice_iterator;
+    unsigned int source_iterator;
+
+    for (
+        slice_iterator = 0, source_iterator = begin;
+        source_iterator != end;
+        slice_iterator++, source_iterator++
+    ) {
+        sliced_ptr[slice_iterator] = source[source_iterator];
+    }
+
+    sliced_ptr[slice_iterator] = '\0';
+
+    std::string sliced_str = (const char*) sliced_ptr;
+
+    delete [] sliced_ptr;
+
+    return sliced_str;
 }
 
 std::vector<Token> Lexer::tokens() {
