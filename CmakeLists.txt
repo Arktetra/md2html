@@ -6,6 +6,6 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g -Wall -Wextra")
 project(md2html)
 
 add_executable(md2html main.cpp)
-add_library(str src/printer/string.cpp)
+add_library()
 
-target_link_libraries(md2html str)
+target_link_libraries(md2html)
