@@ -154,7 +154,11 @@ std::string Lexer::slice_source(unsigned int begin, unsigned int end) {
         source_iterator != end;
         slice_iterator++, source_iterator++
     ) {
-        sliced_ptr[slice_iterator] = source[source_iterator];
+        if (source[source_iterator] == '\n') {
+            sliced_ptr[slice_iterator] = ' ';
+        } else {
+            sliced_ptr[slice_iterator] = source[source_iterator];
+        }
     }
 
     sliced_ptr[slice_iterator] = '\0';
