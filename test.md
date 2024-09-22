@@ -1,12 +1,9 @@
 # Title
 
-Content goes here. I am just going to write a few more things here
-and there right now.
+Some contents here.
 
-another paragraph.
-
-And another one.
+Some supporting contents here.
 
 ## Introduction
 
-Would have liked to write something here.
+May be something here.
