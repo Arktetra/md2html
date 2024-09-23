@@ -10,6 +10,8 @@ std::ostream& operator<<(std::ostream& stream, const TokenType& type) {
         case TokenType::H5: return stream << "H5";
         case TokenType::H6: return stream << "H6";
         case TokenType::P: return stream << "P" ;
+        case TokenType::Next: return stream << "Next";
+        case TokenType::Prev: return stream << "Prev";
         case TokenType::eof: return stream << "eof";
         case TokenType::None: return stream << "None";
     }
@@ -49,6 +51,16 @@ void Lexer::scan_token() {
     switch (c) {
         case '#': this->heading(); break;
         case '\n': this->advance(); break;
+        case '>':
+            if (this->peek() == '>') {
+                this->next();
+            }
+            break;
+        case '<':
+            if (this->peek() == '<') {
+                this->previous();
+            }   
+            break;
         default: this->paragraph();
     }
 }
@@ -87,6 +99,40 @@ void Lexer::paragraph() {
     std::string para = this->slice_source(this->start, this->current);
     _tokens.push_back(Token(TokenType::P, para));
 }
+
+void Lexer::next() {
+    while (true) {
+        if ((this->advance() == ':')) break;
+    }
+
+    if ((this->peek() == ' ')) this->advance();
+
+    this->start = this->current;
+
+    while (this->peek() != '\n' && !this->is_at_end()) {
+        this->advance();
+    }
+
+    std::string next = this->slice_source(this->start, this->current);
+    _tokens.push_back(Token(TokenType::Next, next));
+}
+
+void Lexer::previous() {
+    while (true) {
+        if ((this->advance() == ':')) break;
+    }
+
+    if ((this->peek() == ' ')) this->advance();
+
+    this->start = this->current;
+
+    while (this->peek() != '\n' && !this->is_at_end()) {
+        this->advance();
+    }
+
+    std::string previous = this->slice_source(this->start, this->current);
+    _tokens.push_back(Token(TokenType::Prev, previous));
+}   
 
 TokenType Lexer::heading_level(unsigned int heading_level_counter) {
     switch (heading_level_counter) {
@@ -142,7 +188,7 @@ void Lexer::display_tokens() {
 /// @param end 
 /// @return std::string
 std::string Lexer::slice_source(unsigned int begin, unsigned int end) {
-    if (begin >= end) 
+    if (begin > end) 
         error("The beginning of the sliced string should be less than its end.");
 
     char* sliced_ptr = new char [end - begin + 1];

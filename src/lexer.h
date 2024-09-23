@@ -13,6 +13,8 @@ enum class TokenType {
     H5,
     H6,
     P,
+    Next,
+    Prev,
     eof,
     None
 };
@@ -49,6 +51,8 @@ class Lexer {
         void scan_token();
         void heading();
         void paragraph();
+        void next();
+        void previous();
         TokenType heading_level(unsigned int heading_level_counter);
         char advance();
         char peek();
