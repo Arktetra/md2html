@@ -12,6 +12,8 @@ std::ostream& operator<<(std::ostream& stream, const TokenType& type) {
         case TokenType::P: return stream << "P" ;
         case TokenType::Next: return stream << "Next";
         case TokenType::Prev: return stream << "Prev";
+        case TokenType::Quote: return stream << "Quote";
+        case TokenType::BlockCode: return stream << "Blockcode";
         case TokenType::eof: return stream << "eof";
         case TokenType::None: return stream << "None";
     }
@@ -54,12 +56,19 @@ void Lexer::scan_token() {
         case '>':
             if (this->peek() == '>') {
                 this->next();
+            } else {
+                this->quote();
             }
             break;
         case '<':
             if (this->peek() == '<') {
                 this->previous();
             }   
+            break;
+        case '`':
+            if (this->peek() == '`' && this->peek_next() == '`') {
+                this->block_code();
+            }
             break;
         default: this->paragraph();
     }
@@ -78,43 +87,50 @@ void Lexer::heading() {
 
     this->start = this->current;
 
-    while (this->peek() != '\n' && !this->is_at_end()) {
-        c = this->advance();
-    }
+    this->advance_until('\n');
 
     std::string header = this->slice_source(this->start, this->current);
     _tokens.push_back(Token(this->heading_level(heading_level_counter), header));
 }
 
 void Lexer::paragraph() {
-    while (true) {
-        if ((this->peek() == '\n' && this->peek_next() == '\n') 
-            || (this->source.length() - this->current < 2)) {
-            break;
-        }
-
-        this->advance();
-    }
+    this->advance_text();
 
     std::string para = this->slice_source(this->start, this->current);
     _tokens.push_back(Token(TokenType::P, para));
 }
 
 void Lexer::next() {
-    while (true) {
-        if ((this->advance() == ':')) break;
-    }
+    // advances until the whitespace in `Next: `.
+    this->advance_until(' ');
 
     if ((this->peek() == ' ')) this->advance();
 
     this->start = this->current;
-
-    while (this->peek() != '\n' && !this->is_at_end()) {
-        this->advance();
-    }
+    this->advance_until('\n');
 
     std::string next = this->slice_source(this->start, this->current);
     _tokens.push_back(Token(TokenType::Next, next));
+}
+
+void Lexer::quote() {
+    if ((this->peek() == ' ')) this->advance();
+
+    this->start = this->current;
+    this->advance_text();
+
+    std::string quote = this->slice_source(this->start, this->current, '>');
+    _tokens.push_back(Token(TokenType::Quote, quote));
+}
+
+void Lexer::block_code() {
+    this->advance_until('\n');
+    this->start = this->current + 1;
+    this->advance_until('`');
+    std::string code = this->slice_source(this->start, this->current);
+    this->advance_until('\n');
+
+    _tokens.push_back(Token(TokenType::BlockCode, code));
 }
 
 void Lexer::previous() {
@@ -125,10 +141,7 @@ void Lexer::previous() {
     if ((this->peek() == ' ')) this->advance();
 
     this->start = this->current;
-
-    while (this->peek() != '\n' && !this->is_at_end()) {
-        this->advance();
-    }
+    this->advance_until('\n');
 
     std::string previous = this->slice_source(this->start, this->current);
     _tokens.push_back(Token(TokenType::Prev, previous));
@@ -151,6 +164,31 @@ char Lexer::advance() {
     return c;
 }
 
+/// @brief skips a block of text.
+void Lexer::advance_text() {
+    while (true) {
+        if ((this->peek() == '\n' && this->peek_next() == '\n') 
+            || (this->source.length() - this->current < 2)) {
+            return;
+        }
+
+
+        this->advance();
+    }
+}
+
+/// @brief skips all the characters until the current position is of `c`.
+/// @param c the character until which all the remaining characters are skipped.
+void Lexer::advance_until(char c) {
+    while (true) {
+        if (this->peek() == c || this->is_at_end()) {
+            return;
+        }
+
+        this->advance();
+    }
+}
+
 char Lexer::peek() {
     char c = source[this->current];
     return c;
@@ -164,6 +202,7 @@ char Lexer::peek_next() {
         char c = source[this->current + 1];
         return c;
     } catch (const char* error) {
+        std::cerr << error << std::endl;
         throw error;
     }
 }
@@ -187,11 +226,19 @@ void Lexer::display_tokens() {
 /// @param begin 
 /// @param end 
 /// @return std::string
-std::string Lexer::slice_source(unsigned int begin, unsigned int end) {
+std::string Lexer::slice_source(
+    unsigned int begin, 
+    unsigned int end,
+    char skip_char
+) {
     if (begin > end) 
         error("The beginning of the sliced string should be less than its end.");
 
-    char* sliced_ptr = new char [end - begin + 1];
+    unsigned int skip_length = 0;
+
+    if (skip_char != '\0') skip_length = 1;
+
+    char* sliced_ptr = new char [end - begin + 1 - skip_length];
     unsigned int slice_iterator;
     unsigned int source_iterator;
 
@@ -200,7 +247,10 @@ std::string Lexer::slice_source(unsigned int begin, unsigned int end) {
         source_iterator != end;
         slice_iterator++, source_iterator++
     ) {
-        if (source[source_iterator] == '\n') {
+        if (source[source_iterator] == skip_char) {
+            slice_iterator--;
+            continue;
+        } else if (source[source_iterator] == '\n') {
             sliced_ptr[slice_iterator] = ' ';
         } else {
             sliced_ptr[slice_iterator] = source[source_iterator];

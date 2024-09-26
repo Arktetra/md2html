@@ -12,8 +12,8 @@ int main() {
     lexer.scan_tokens();
     lexer.display_tokens();
 
-    Printer printer(lexer.tokens(), "../layout.html");
-    printer.print("../test.html");
+    // Printer printer(lexer.tokens(), "../layout.html");
+    // printer.print("../test.html");
 
     return 0;
 }

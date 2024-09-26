@@ -15,6 +15,8 @@ enum class TokenType {
     P,
     Next,
     Prev,
+    Quote,
+    BlockCode,
     eof,
     None
 };
@@ -53,15 +55,23 @@ class Lexer {
         void paragraph();
         void next();
         void previous();
+        void quote();
+        void block_code();
         TokenType heading_level(unsigned int heading_level_counter);
         char advance();
+        void advance_text();
+        void advance_until(char c);
         char peek();
         char peek_next();
         bool is_at_end();
 
         void error(const char* message);
         void display_tokens();
-        std::string slice_source(unsigned int begin, unsigned int end);
+        std::string slice_source(
+            unsigned int begin, 
+            unsigned int end, 
+            char skip_char = '\0'
+        );
         std::vector<Token> tokens();
         
 };
